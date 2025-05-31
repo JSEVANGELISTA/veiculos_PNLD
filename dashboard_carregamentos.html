@@ -1,0 +1,131 @@
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Carregamentos</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-3xl font-bold mb-6">📦 Dashboard - Controle de Carregamentos</h1>
+
+  <!-- Indicadores -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+    <div class="bg-blue-200 p-4 rounded-xl text-center">
+      <p class="text-xl font-semibold" id="kpi-previstos">0</p>
+      <p>Previstos</p>
+    </div>
+    <div class="bg-green-200 p-4 rounded-xl text-center">
+      <p class="text-xl font-semibold" id="kpi-apresentados">0</p>
+      <p>Apresentados</p>
+    </div>
+    <div class="bg-green-400 p-4 rounded-xl text-center">
+      <p class="text-xl font-semibold" id="kpi-carregados">0</p>
+      <p>Carregados</p>
+    </div>
+    <div class="bg-yellow-200 p-4 rounded-xl text-center">
+      <p class="text-xl font-semibold" id="kpi-fila">0</p>
+      <p>Na Fila</p>
+    </div>
+    <div class="bg-red-300 p-4 rounded-xl text-center">
+      <p class="text-xl font-semibold" id="kpi-pendentes">0</p>
+      <p>Pendentes</p>
+    </div>
+  </div>
+
+  <!-- Gráficos -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white p-4 rounded-xl shadow">
+      <h2 class="text-lg font-semibold mb-2">Distribuição por Status</h2>
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Tabela -->
+  <div class="bg-white p-4 rounded-xl shadow">
+    <h2 class="text-lg font-semibold mb-4">Detalhamento por Veículo</h2>
+    <table class="w-full table-auto text-sm">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="px-2 py-1 text-left">Data</th>
+          <th class="px-2 py-1 text-left">Editora</th>
+          <th class="px-2 py-1 text-left">Veículo</th>
+          <th class="px-2 py-1 text-left">Status</th>
+          <th class="px-2 py-1 text-left">Previsto</th>
+          <th class="px-2 py-1 text-left">Chegada</th>
+          <th class="px-2 py-1 text-left">Saída</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const csvUrl = "COLE-SEU-LINK-AQUI";
+
+    async function fetchSheetData() {
+      const response = await fetch(csvUrl);
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(row => row.split(","));
+
+      const headers = rows[0];
+      const data = rows.slice(1);
+
+      let previstos = 0, apresentados = 0, carregados = 0, fila = 0, pendentes = 0;
+
+      const tableBody = document.getElementById("table-body");
+      tableBody.innerHTML = "";
+
+      data.forEach(row => {
+        const [dataStr, editora, veiculo, status, previsto, chegada, saida] = row;
+
+        previstos++;
+        if (chegada) apresentados++;
+        if (status.toLowerCase() === "carregado") carregados++;
+        if (status.toLowerCase() === "na fila") fila++;
+        if (status.toLowerCase() === "pendente") pendentes++;
+
+        const linha = `<tr>
+          <td class="px-2 py-1">${dataStr}</td>
+          <td class="px-2 py-1">${editora}</td>
+          <td class="px-2 py-1">${veiculo}</td>
+          <td class="px-2 py-1">${status}</td>
+          <td class="px-2 py-1">${previsto}</td>
+          <td class="px-2 py-1">${chegada}</td>
+          <td class="px-2 py-1">${saida}</td>
+        </tr>`;
+        tableBody.innerHTML += linha;
+      });
+
+      document.getElementById("kpi-previstos").innerText = previstos;
+      document.getElementById("kpi-apresentados").innerText = apresentados;
+      document.getElementById("kpi-carregados").innerText = carregados;
+      document.getElementById("kpi-fila").innerText = fila;
+      document.getElementById("kpi-pendentes").innerText = pendentes;
+
+      updateCharts(carregados, fila, pendentes, apresentados, previstos);
+    }
+
+    function updateCharts(carregados, fila, pendentes, apresentados, previstos) {
+      new Chart(document.getElementById('pieChart'), {
+        type: 'pie',
+        data: {
+          labels: ['Carregado', 'Na Fila', 'Pendente', 'Apresentado', 'Previsto'],
+          datasets: [{
+            data: [carregados, fila, pendentes, apresentados, previstos],
+            backgroundColor: ['#4ade80', '#fde68a', '#fca5a5', '#86efac', '#93c5fd']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+    }
+
+    fetchSheetData();
+  </script>
+</body>
+</html>
